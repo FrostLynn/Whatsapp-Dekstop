@@ -191,6 +191,31 @@ func TestSettingsControlsRemainWired(t *testing.T) {
 	}
 }
 
+func TestSettingsAlwaysHasAnAccessibleEntryPoint(t *testing.T) {
+	script := getInitScript("test-agent")
+	start := strings.Index(script, "function injectHeaderToolbarBtn()")
+	end := strings.Index(script, "window.showSettingsModal = function()")
+	if start < 0 || end < 0 || end <= start {
+		t.Fatal("settings entry-point implementation is incomplete")
+	}
+	entryPoints := script[start:end]
+	if strings.Contains(entryPoints, "function injectHeaderToolbarBtn() {\n\t\t\t\tif (shouldPauseBackgroundWork())") {
+		t.Fatal("essential Settings button must not be deferred by scroll throttling")
+	}
+	for _, want := range []string{
+		"wa-toolbar-settings-btn",
+		"wa-settings-fallback-btn",
+		"ensureSettingsFallback",
+		"setTimeout(ensureSettingsEntryPoints, 600)",
+		"window.addEventListener('keydown', function(e)",
+		"}, true);",
+	} {
+		if !strings.Contains(script, want) {
+			t.Errorf("settings must remain reachable on changing WhatsApp UI; missing %q", want)
+		}
+	}
+}
+
 func TestSettingsHelpUsesLocalDiagnosticsAndDocumentsShortcuts(t *testing.T) {
 	script := getInitScript("test-agent")
 	for _, want := range []string{

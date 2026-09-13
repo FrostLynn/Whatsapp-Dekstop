@@ -2634,7 +2634,6 @@ func getInitScript(ua string) string {
 
 			// --- In-Flow Header Toolbar Button (Non-Floating, Clean WhatsApp Style) ---
 			function injectHeaderToolbarBtn() {
-				if (shouldPauseBackgroundWork()) return;
 				if (document.getElementById('wa-toolbar-settings-btn')) return;
 
 				// Target WhatsApp Web's left header above chats
@@ -2686,21 +2685,56 @@ func getInitScript(ua string) string {
 				actionsWrap.appendChild(btn);
 			}
 
-			injectHeaderToolbarBtn();
-			document.addEventListener('DOMContentLoaded', injectHeaderToolbarBtn);
-			window.addEventListener('load', injectHeaderToolbarBtn);
+			// WhatsApp periodically replaces the sidebar header. Keep an explicit
+			// entry point available if its changing DOM prevents the in-flow gear
+			// from being mounted. This is an accessibility fallback, not a second
+			// control: it removes itself as soon as the normal toolbar button exists.
+			function ensureSettingsFallback() {
+				var toolbarButton = document.getElementById('wa-toolbar-settings-btn');
+				var fallback = document.getElementById('wa-settings-fallback-btn');
+				if (toolbarButton) {
+					if (fallback && fallback.parentNode) fallback.parentNode.removeChild(fallback);
+					return;
+				}
+				if (fallback || !document.body) return;
+				fallback = document.createElement('button');
+				fallback.id = 'wa-settings-fallback-btn';
+				fallback.type = 'button';
+				fallback.setAttribute('aria-label', 'Open Settings and Controls');
+				fallback.title = 'Settings & Controls (' + (isMac ? 'Cmd' : 'Ctrl') + ' + ,)';
+				fallback.textContent = '⚙ Settings';
+				fallback.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:9999998;border:1px solid rgba(134,150,160,.55);border-radius:8px;background:#111b21;color:#e9edef;padding:8px 10px;font:600 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.24);';
+				fallback.onclick = function(e) {
+					e.preventDefault();
+					e.stopPropagation();
+					window.showSettingsModal();
+				};
+				document.body.appendChild(fallback);
+			}
+
+			function ensureSettingsEntryPoints() {
+				injectHeaderToolbarBtn();
+				ensureSettingsFallback();
+			}
+
+			ensureSettingsEntryPoints();
+			document.addEventListener('DOMContentLoaded', function() {
+				ensureSettingsEntryPoints();
+				setTimeout(ensureSettingsEntryPoints, 600);
+			});
+			window.addEventListener('load', ensureSettingsEntryPoints);
 			// WhatsApp rebuilds its header when switching chats, dropping our
 			// button. Watch only #side/header region changes (rAF-coalesced)
 			// instead of scanning the whole page every 2 seconds forever.
 			var toolbarCheckQueued = false;
 			var toolbarNarrowed = false;
 			var toolbarObserver = new MutationObserver(function() {
-				if (toolbarCheckQueued || shouldPauseBackgroundWork()) return;
+				if (toolbarCheckQueued) return;
 				toolbarCheckQueued = true;
 				requestAnimationFrame(function() {
 					toolbarCheckQueued = false;
 					if (!document.getElementById('wa-toolbar-settings-btn')) {
-						injectHeaderToolbarBtn();
+						ensureSettingsEntryPoints();
 					}
 					// Narrow the observed root once the header exists.
 					if (!toolbarNarrowed) {
@@ -3262,7 +3296,7 @@ func getInitScript(ua string) string {
 						showFloatingToast('📁 Opening downloads folder...');
 					}
 				}
-			});
+			}, true);
 		})();
 	` + "\n" + getOnboardingScript()
 	// Single source of truth: every UI version string flows from appVersion
