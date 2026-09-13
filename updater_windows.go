@@ -27,36 +27,7 @@ func applyUpdateWindows(newExePath string) error {
 	// Delays use "ping -n 2 127.0.0.1" instead of "timeout /t 1": timeout.exe
 	// refuses to run when stdin is not an interactive console, which turns every
 	// wait into a hot spin loop.
-	batContent := fmt.Sprintf(`@echo off
-setlocal
-set OLD_PID=%d
-set SRC=%s
-set DST=%s
-
-:wait_loop
-tasklist /fi "PID eq %%OLD_PID%%" 2>NUL | findstr /i "%%OLD_PID%%" >NUL
-if not errorlevel 1 (
-    ping -n 2 127.0.0.1 >NUL
-    goto wait_loop
-)
-
-ping -n 2 127.0.0.1 >NUL
-
-set RETRY=0
-:copy_loop
-copy /y "%%SRC%%" "%%DST%%" >NUL 2>&1
-if errorlevel 1 (
-    set /a RETRY+=1
-    if %%RETRY%% leq 12 (
-        ping -n 2 127.0.0.1 >NUL
-        goto copy_loop
-    )
-)
-
-del /f /q "%%SRC%%" >NUL 2>&1
-start "" "%%DST%%"
-del /f /q "%%~f0" >NUL 2>&1
-`, pid, newExePath, execPath)
+	batContent := windowsUpdateBatch(pid, newExePath, execPath)
 
 	batPath := filepath.Join(os.TempDir(), fmt.Sprintf("wa_update_%d.bat", pid))
 	if err := os.WriteFile(batPath, []byte(batContent), 0755); err != nil {

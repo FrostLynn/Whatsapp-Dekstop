@@ -397,6 +397,51 @@ func downloadFileWithProgress(url, destPath string, onProgress func(int)) error 
 	return err
 }
 
+// windowsUpdateBatch is kept platform-neutral so the restart contract can be
+// regression-tested on every development host. The batch itself runs only in
+// the Windows helper after the GUI process exits.
+func windowsUpdateBatch(pid int, newExePath, execPath string) string {
+	return fmt.Sprintf(`@echo off
+setlocal
+set OLD_PID=%d
+set SRC=%s
+set DST=%s
+set UPDATE_LOG=%%TEMP%%\WhatsAppDesk-update.log
+
+:wait_loop
+tasklist /fi "PID eq %%OLD_PID%%" 2>NUL | findstr /i "%%OLD_PID%%" >NUL
+if not errorlevel 1 (
+    ping -n 2 127.0.0.1 >NUL
+    goto wait_loop
+)
+
+ping -n 2 127.0.0.1 >NUL
+
+set RETRY=0
+:copy_loop
+copy /y "%%SRC%%" "%%DST%%" >NUL 2>&1
+if not errorlevel 1 goto restart
+set /a RETRY+=1
+if %%RETRY%% leq 12 (
+    ping -n 2 127.0.0.1 >NUL
+    goto copy_loop
+)
+goto copy_failed
+
+:copy_failed
+> "%%UPDATE_LOG%%" echo WhatsApp Desk update could not replace "%%DST%%". The existing version was restarted.
+start "" "%%DST%%"
+goto cleanup
+
+:restart
+del /f /q "%%SRC%%" >NUL 2>&1
+start "" "%%DST%%"
+
+:cleanup
+del /f /q "%%~f0" >NUL 2>&1
+`, pid, newExePath, execPath)
+}
+
 func executeUpdate(ui UIController, downloadURL string) error {
 	if !updateExecutionMu.TryLock() {
 		ui.Dispatch(func() {

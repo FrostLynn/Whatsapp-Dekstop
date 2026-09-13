@@ -77,6 +77,26 @@ func TestWindowsUpdaterSelectsWhatsAppDesk(t *testing.T) {
 	}
 }
 
+func TestWindowsUpdaterRecoversWhenExecutableReplacementFails(t *testing.T) {
+	batch := windowsUpdateBatch(4321, `C:\Temp\update.exe`, `C:\Apps\WhatsAppDesk.exe`)
+	for _, want := range []string{
+		`:copy_loop`,
+		`if not errorlevel 1 goto restart`,
+		`goto copy_failed`,
+		`:copy_failed`,
+		`WhatsAppDesk-update.log`,
+		`The existing version was restarted.`,
+		`:restart`,
+	} {
+		if !strings.Contains(batch, want) {
+			t.Errorf("Windows updater recovery script is missing %q", want)
+		}
+	}
+	if strings.Index(batch, `:copy_failed`) > strings.Index(batch, `:restart`) {
+		t.Fatal("failed-copy recovery must be defined before the normal restart path")
+	}
+}
+
 func TestProgressWriterFallback(t *testing.T) {
 	var reported []int
 	pw := &progressWriter{
