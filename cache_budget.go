@@ -8,11 +8,7 @@ package main
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -34,28 +30,6 @@ func dirSizeBytes(path string) int64 {
 
 // cacheSubdirs removes only the given subdirectories' contents when the total
 // size of all watched roots exceeds the cap. Runs asynchronously.
-// ebWebViewCacheBusy reports whether the WebView2 browser process holds any
-// file inside the cache home open. Deleting Chromium cache directories while
-// the engine is running can corrupt the profile (locked entries are skipped
-// mid-recursive-delete), so on Windows the purge is skipped whenever the
-// runtime is alive; the next app start clears it safely instead.
-func ebWebViewCacheBusy() bool {
-	if runtime.GOOS != "windows" {
-		return false
-	}
-	out, err := exec.Command("powershell", "-NoProfile", "-Command",
-		`Get-Process msedgewebview2 -ErrorAction SilentlyContinue | Measure-Object | Select-Object -ExpandProperty Count`).Output()
-	if err != nil {
-		// Cannot tell: assume busy rather than risk a corrupting delete.
-		return true
-	}
-	n, parseErr := strconv.Atoi(strings.TrimSpace(string(out)))
-	if parseErr != nil {
-		return true
-	}
-	return n > 0
-}
-
 // enforceDiskCacheCapSync runs the same budget check on the calling goroutine.
 // Used at startup, where the WebView2 engine has not been created yet: the
 // delete must complete before the engine starts opening those files.

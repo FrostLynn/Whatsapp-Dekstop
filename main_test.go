@@ -547,6 +547,24 @@ func TestWindowsProcessProtectionPermitsChildBreakaway(t *testing.T) {
 	}
 }
 
+func TestWindowsCacheProbeNeverShowsTerminal(t *testing.T) {
+	source, err := os.ReadFile("cache_budget_windows.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(source)
+	for _, want := range []string{
+		`powershell.exe`,
+		`"-NonInteractive"`,
+		`"-WindowStyle", "Hidden"`,
+		`syscall.SysProcAttr{HideWindow: true}`,
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("Windows cache probe must prevent console flash; missing %q", want)
+		}
+	}
+}
+
 func TestMediaViewerCloseButtonNotIntercepted(t *testing.T) {
 	script := getInitScript("test-agent")
 
