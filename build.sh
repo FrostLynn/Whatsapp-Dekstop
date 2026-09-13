@@ -35,8 +35,13 @@ build_windows() {
         CGO_FLAG=0
     fi
     rm -f WhatsAppDesk.exe
+    # Keep the normal Go build identity and symbol metadata in the public
+    # Windows artifact.  An unsigned, aggressively stripped GUI executable is
+    # more likely to be classified heuristically by endpoint protection.  This
+    # does not replace Authenticode signing, but makes the binary traceable and
+    # easier for security products to inspect.
     GOOS=windows GOARCH=amd64 CGO_ENABLED="${CGO_FLAG}" \
-        go build -ldflags="-s -w -buildid= -H windowsgui -X main.appVersion=${VERSION}" \
+        go build -ldflags="-H windowsgui -X main.appVersion=${VERSION}" \
         -trimpath -o WhatsAppDesk.exe .
     rm -f WhatsApp-Desk-Windows-x64.zip
     zip -q WhatsApp-Desk-Windows-x64.zip WhatsAppDesk.exe
