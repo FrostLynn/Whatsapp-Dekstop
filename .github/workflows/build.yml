@@ -90,6 +90,7 @@ jobs:
           path: |
             WhatsApp-Desk-Linux-x64.tar.gz
             WhatsApp-Desk-Linux-amd64.deb
+            WhatsApp-Desk-Linux-x64.AppImage
 
   linux-arm64:
     needs: prepare
@@ -113,6 +114,7 @@ jobs:
           path: |
             WhatsApp-Desk-Linux-arm64.tar.gz
             WhatsApp-Desk-Linux-arm64.deb
+            WhatsApp-Desk-Linux-arm64.AppImage
 
   publish:
     needs: [prepare, macos, windows, linux-x64, linux-arm64]
@@ -134,5 +136,7 @@ jobs:
             release-assets/WhatsApp-Desk-macOS-Universal.zip
             release-assets/WhatsApp-Desk-Linux-x64.tar.gz
             release-assets/WhatsApp-Desk-Linux-amd64.deb
+            release-assets/WhatsApp-Desk-Linux-x64.AppImage
             release-assets/WhatsApp-Desk-Linux-arm64.tar.gz
             release-assets/WhatsApp-Desk-Linux-arm64.deb
+            release-assets/WhatsApp-Desk-Linux-arm64.AppImage

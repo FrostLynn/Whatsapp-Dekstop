@@ -21,6 +21,11 @@ build_linux() {
     bash build_linux.sh "${VERSION}"
 }
 
+build_appimage() {
+    echo "=== Linux (AppImage) ==="
+    bash build_linux.sh "${VERSION}"
+}
+
 build_windows() {
     echo "=== Windows (x64) ==="
     if [ "$(uname -s)" != "MINGW"* ] && [ "$(uname -s)" != "MSYS"* ] && [ "${GOOS:-}" != "windows" ]; then
@@ -96,6 +101,7 @@ DOCKER_EOF
 case "${TARGET}" in
     mac)      build_mac ;;
     linux)    build_linux ;;
+    appimage) build_appimage ;;
     windows)  build_windows ;;
     check)    check_all ;;
     all)
@@ -106,7 +112,7 @@ case "${TARGET}" in
             *) echo "Unknown host $(uname -s); run with an explicit target."; exit 1 ;;
         esac
         ;;
-    *) echo "Usage: $0 [mac|linux|windows|all|check] [version]"; exit 1 ;;
+    *) echo "Usage: $0 [mac|linux|appimage|windows|all|check] [version]"; exit 1 ;;
 esac
 
 echo "Done! (version ${VERSION})"
